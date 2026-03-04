@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 interface Comment {
   id: number
@@ -6,26 +7,59 @@ interface Comment {
   optimistic?: boolean
 }
 
+let lastId = 2
+
 export const InstagromApp = () => {
+  const [isPending, startTransition] = useTransition()
   const [comments, setComments] = useState<Comment[]>([
     { id: 1, text: '¡Gran foto!' },
     { id: 2, text: 'Me encanta 🧡' },
   ])
 
+  const [optimisticComments, addOptimisticComment] = useOptimistic(
+    comments,
+    (currentComments, newCommentText: string) => {
+      lastId++
+      return [
+        ...currentComments,
+        {
+          id: lastId,
+          text: newCommentText,
+          optimistic: true,
+        },
+      ]
+    },
+  )
+
   const handleAddComment = async (formData: FormData) => {
     const messageText = formData.get('post-message') as string
-    console.log('Nuevo comentario', messageText)
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-    console.log('mensaje grabado')
+    addOptimisticComment(messageText)
 
-    setComments((prev) => [
-      ...prev,
-      {
-        id: new Date().getTime(),
-        text: messageText,
-      },
-    ])
+    startTransition(async () => {
+      // simular la peticion http al servidor
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      // setComments((prev) => [
+      //   ...prev,
+      //   {
+      //     id: new Date().getTime(),
+      //     text: messageText,
+      //   },
+      // ])
+
+      // ! Este es el codigo para revertir el proceso
+      setComments((prev) => prev)
+      toast('Error al agregar el comentario', {
+        description: 'Intente nuevamente',
+        duration: 10000,
+        position: 'top-right',
+        action: {
+          label: 'X',
+          onClick: () => toast.dismiss(),
+        },
+      })
+    })
   }
 
   return (
@@ -44,7 +78,7 @@ export const InstagromApp = () => {
 
       {/* Comentarios */}
       <ul className="flex flex-col items-start justify-center bg-gray-300 w-[500px] p-4">
-        {comments.map((comment) => (
+        {optimisticComments.map((comment) => (
           <li key={comment.id} className="flex items-center gap-2 mb-2">
             <div className="bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center">
               <span className="text-white text-center">A</span>
@@ -71,7 +105,7 @@ export const InstagromApp = () => {
         />
         <button
           type="submit"
-          disabled={false}
+          disabled={isPending}
           className="bg-blue-500 text-white p-2 rounded-md w-full"
         >
           Enviar
