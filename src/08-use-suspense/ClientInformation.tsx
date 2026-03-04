@@ -1,5 +1,5 @@
-import { use, useEffect, type Usable } from 'react'
-import { getUserAction, type User } from './api/get-user-action'
+import { use, type Usable } from 'react'
+import type { User } from './api/get-user-action'
 
 interface Props {
   getUser: Usable<User>
@@ -7,10 +7,6 @@ interface Props {
 
 export const ClientInformation = ({ getUser }: Props) => {
   const user = use(getUser)
-
-  // useEffect(() => {
-  //   getUserAction(id).then(console.log)
-  // }, [id])
 
   return (
     <div className="bg-gradient flex flex-col gap-4">
