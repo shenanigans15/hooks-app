@@ -1,5 +1,10 @@
-import { createContext, useState, type PropsWithChildren } from 'react'
-import type { User } from '../data/user-moc.data'
+import {
+  createContext,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+} from 'react'
+import { users, type User } from '../data/user-moc.data'
 
 // interface UserContextProps {
 //   children: React.ReactNode
@@ -11,6 +16,7 @@ interface UserContextProps {
   // state
   authStatus: AuthStatus
   user: User | null
+  isAuthenticated: boolean
 
   // Methods
   login: (userId: number) => boolean
@@ -25,19 +31,42 @@ export const UserContextProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useState<User | null>(null)
 
   const handleLogin = (userId: number) => {
-    console.log({ userId })
+    const user = users.find((user) => user.id === userId)
+    if (!user) {
+      console.log(`User not found ${userId}`)
+      setUser(null)
+      setAuthStatus('not-authenticated')
+      return false
+    }
+
+    setUser(user)
+    setAuthStatus('authenticated')
+    localStorage.setItem('userId', userId.toString())
     return true
   }
 
   const handleLogout = () => {
-    console.log('logout')
+    setAuthStatus('not-authenticated')
+    setUser(null)
+    localStorage.removeItem('userId')
   }
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId')
+    if (storedUserId) {
+      handleLogin(+storedUserId)
+      return
+    }
+    handleLogout()
+  }, [])
 
   return (
     <UserContext
       value={{
         authStatus: authStatus,
         user: user,
+        isAuthenticated: authStatus === 'authenticated',
+
         login: handleLogin,
         logout: handleLogout,
       }}
